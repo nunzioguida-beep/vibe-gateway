@@ -2,6 +2,11 @@ import { Router, Request, Response } from "express";
 import { verifyWebhookSignature } from "../middleware/verifyWebhook";
 import { forwardToAgent } from "../services/vibeCore";
 import { sendTextMessage, markMessageRead } from "../services/whatsapp";
+import {
+  getOrCreateConversation,
+  saveUserMessage,
+  saveAssistantMessage,
+} from "../services/history";
 import { MessageEnvelope } from "../types/contracts";
 
 const router = Router();
@@ -44,8 +49,17 @@ router.post(
         // Mark as read so the user sees the double blue tick
         await markMessageRead(msg.id).catch(() => {});
 
+        const conversationId = await getOrCreateConversation(envelope.from);
+        await saveUserMessage(conversationId, envelope).catch((e) =>
+          console.error("Failed to save user message:", e)
+        );
+
         const agentResponse = await forwardToAgent(envelope);
         await sendTextMessage(envelope.from, agentResponse.reply);
+
+        await saveAssistantMessage(conversationId, agentResponse.reply).catch(
+          (e) => console.error("Failed to save assistant message:", e)
+        );
       }
     } catch (err) {
       console.error("Error handling webhook:", err);
