@@ -5,11 +5,11 @@ import webhookRouter from "./routes/webhook";
 const app = express();
 const PORT = process.env.PORT ?? 3000;
 
-// Raw body required for signature verification — must be before json()
+// Raw body stored on req.rawBody for signature verification
 app.use(
   express.json({
-    verify: (req, _res, buf) => {
-      (req as express.Request & { body: Buffer }).body = buf;
+    verify: (req: express.Request & { rawBody?: Buffer }, _res, buf) => {
+      req.rawBody = buf;
     },
   })
 );

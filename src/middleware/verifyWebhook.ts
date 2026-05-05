@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import crypto from "crypto";
 
 export function verifyWebhookSignature(
-  req: Request,
+  req: Request & { rawBody?: Buffer },
   res: Response,
   next: NextFunction
 ): void {
@@ -22,7 +22,7 @@ export function verifyWebhookSignature(
     "sha256=" +
     crypto
       .createHmac("sha256", appSecret)
-      .update(req.body as Buffer)
+      .update(req.rawBody ?? Buffer.alloc(0))
       .digest("hex");
 
   const trusted = Buffer.from(expected, "utf8");
