@@ -9,7 +9,7 @@ export async function forwardToAgent(
   const { data } = await axios.post<AgentResponse>(
     `${url}/process`,
     envelope,
-    { headers: { "Content-Type": "application/json" } }
+    { headers: { "Content-Type": "application/json" }, timeout: 15000 }
   );
 
   return data;

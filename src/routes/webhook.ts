@@ -39,6 +39,8 @@ router.post(
       const change = entry?.changes?.[0];
       const value = change?.value;
 
+      console.log("[webhook] POST received, entry:", JSON.stringify(entry?.changes?.[0]?.value ?? {}).slice(0, 300));
+
       const messages = value?.messages;
       if (!value || !messages?.length) return;
 
@@ -49,8 +51,11 @@ router.post(
         // Mark as read so the user sees the double blue tick
         await markMessageRead(msg.id).catch(() => {});
 
+        console.log(`[webhook] forwarding to agent: ${envelope.from} "${envelope.text ?? "audio"}"`);
         const agentResponse = await forwardToAgent(envelope);
+        console.log(`[webhook] agent replied: "${agentResponse.reply.slice(0, 80)}"`);
         await sendTextMessage(envelope.from, agentResponse.reply);
+        console.log(`[webhook] message sent to ${envelope.from}`);
 
         // Persist to Supabase in background — don't block the reply
         getOrCreateConversation(envelope.from)
