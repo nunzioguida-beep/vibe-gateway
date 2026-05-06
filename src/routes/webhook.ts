@@ -49,17 +49,18 @@ router.post(
         // Mark as read so the user sees the double blue tick
         await markMessageRead(msg.id).catch(() => {});
 
-        const conversationId = await getOrCreateConversation(envelope.from);
-        await saveUserMessage(conversationId, envelope).catch((e) =>
-          console.error("Failed to save user message:", e)
-        );
-
         const agentResponse = await forwardToAgent(envelope);
         await sendTextMessage(envelope.from, agentResponse.reply);
 
-        await saveAssistantMessage(conversationId, agentResponse.reply).catch(
-          (e) => console.error("Failed to save assistant message:", e)
-        );
+        // Persist to Supabase in background — don't block the reply
+        getOrCreateConversation(envelope.from)
+          .then((conversationId) =>
+            Promise.all([
+              saveUserMessage(conversationId, envelope),
+              saveAssistantMessage(conversationId, agentResponse.reply),
+            ])
+          )
+          .catch((e) => console.error("Supabase persistence error:", e));
       }
     } catch (err) {
       console.error("Error handling webhook:", err);
