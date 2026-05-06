@@ -4,7 +4,8 @@ export interface MessageEnvelope {
   timestamp: string;
   type: "text" | "audio";
   text?: string;
-  audioUrl?: string;
+  audioData?: string;     // base64 encoded audio
+  audioMimeType?: string; // e.g. "audio/ogg; codecs=opus"
 }
 
 export interface AgentResponse {

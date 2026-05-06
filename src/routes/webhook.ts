@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { verifyWebhookSignature } from "../middleware/verifyWebhook";
 import { forwardToAgent } from "../services/vibeCore";
-import { sendTextMessage, markMessageRead } from "../services/whatsapp";
+import { sendTextMessage, markMessageRead, downloadMedia } from "../services/whatsapp";
 import {
   getOrCreateConversation,
   saveUserMessage,
@@ -45,7 +45,7 @@ router.post(
       if (!value || !messages?.length) return;
 
       for (const msg of messages) {
-        const envelope = buildEnvelope(msg, value);
+        const envelope = await buildEnvelope(msg, value);
         if (!envelope) continue;
 
         // Mark as read so the user sees the double blue tick
@@ -73,10 +73,10 @@ router.post(
   }
 );
 
-function buildEnvelope(
+async function buildEnvelope(
   msg: MetaMessage,
   value: MetaValue
-): MessageEnvelope | null {
+): Promise<MessageEnvelope | null> {
   if (msg.type === "text" && msg.text?.body) {
     return {
       messageId: msg.id,
@@ -88,13 +88,14 @@ function buildEnvelope(
   }
 
   if (msg.type === "audio" && msg.audio?.id) {
-    // vibe-core resolves the audio URL from the media ID
+    const { data, mimeType } = await downloadMedia(msg.audio.id);
     return {
       messageId: msg.id,
       from: msg.from,
       timestamp: msg.timestamp,
       type: "audio",
-      audioUrl: msg.audio.id,
+      audioData: data.toString("base64"),
+      audioMimeType: mimeType,
     };
   }
 

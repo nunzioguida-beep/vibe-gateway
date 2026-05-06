@@ -26,6 +26,22 @@ export async function sendTextMessage(
   );
 }
 
+export async function downloadMedia(mediaId: string): Promise<{ data: Buffer; mimeType: string }> {
+  const token = process.env.META_API_TOKEN;
+  const { data: mediaInfo } = await axios.get<{ url: string; mime_type: string }>(
+    `${BASE_URL}/${mediaId}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  const response = await axios.get<ArrayBuffer>(mediaInfo.url, {
+    headers: { Authorization: `Bearer ${token}` },
+    responseType: "arraybuffer",
+  });
+  return {
+    data: Buffer.from(response.data),
+    mimeType: mediaInfo.mime_type || "audio/ogg",
+  };
+}
+
 export async function markMessageRead(messageId: string): Promise<void> {
   const phoneNumberId = process.env.META_PHONE_NUMBER_ID;
   const token = process.env.META_API_TOKEN;
