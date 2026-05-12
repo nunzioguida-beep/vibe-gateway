@@ -12,6 +12,7 @@ export interface MessageEnvelope {
   audioData?: string;
   audioMimeType?: string;
   history?: HistoryMessage[];
+  userName?: string;
 }
 
 export interface AgentResponse {

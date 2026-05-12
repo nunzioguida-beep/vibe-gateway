@@ -62,6 +62,11 @@ router.post(
           if (handled) continue;
         }
 
+        // Attach verified user name so the agent knows who it's talking to
+        if (conv?.verified && conv.user_name) {
+          envelope.userName = conv.user_name;
+        }
+
         // Fetch history to give the bot memory (best-effort)
         try {
           const conversationId = conv?.id ?? await getOrCreateConversation(envelope.from);
