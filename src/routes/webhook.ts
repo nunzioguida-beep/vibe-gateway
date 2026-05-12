@@ -11,7 +11,7 @@ import {
   saveAssistantMessage,
   getRecentMessages,
 } from "../services/history";
-import { MessageEnvelope } from "../types/contracts";
+import { MessageEnvelope, AgentResponse } from "../types/contracts";
 
 const router = Router();
 
@@ -74,7 +74,7 @@ router.post(
         } catch (_) {}
 
         console.log(`[webhook] forwarding to agent: ${envelope.from} "${envelope.text ?? "audio"}" history:${envelope.history?.length ?? 0}`);
-        let agentResponse;
+        let agentResponse: AgentResponse;
         try {
           agentResponse = await forwardToAgent(envelope);
         } catch (agentErr) {
