@@ -109,10 +109,10 @@ async function handleVerification(
     // First interaction — start verification
     if (knownName) {
       await setConversationPendingVerification(conv.id, knownName);
-      await sendTextMessage(envelope.from, `Ciao ${knownName.split(" ")[0]}! 👋 Sei tu a scrivere? Rispondi "sì" per confermare.`);
+      await sendTextMessage(envelope.from, `Ciao ${knownName.split(" ")[0]}! 👋 Sono Vibe, il tuo assistente Wellhub. Prima di iniziare, posso chiederti di confermare che sei tu? Rispondi "sì" 😊`);
     } else {
       await setConversationPendingVerification(conv.id, "__pending__");
-      await sendTextMessage(envelope.from, `Ciao! 👋 Per tutelare la tua privacy, puoi dirmi il tuo nome e cognome?`);
+      await sendTextMessage(envelope.from, `Ciao! 👋 Sono Vibe, l'assistente Wellhub. Per proteggere la tua privacy, puoi dirmi il tuo nome e cognome?`);
     }
     return true;
   }
@@ -122,22 +122,22 @@ async function handleVerification(
     // Known user confirmed — use knownName as fallback if user_name was lost
     const verifiedName = conv.user_name ?? knownName ?? text;
     await setConversationVerified(conv.id, verifiedName);
-    await sendTextMessage(envelope.from, `Perfetto ${verifiedName.split(" ")[0]}! ✅ Come posso aiutarti?`);
+    await sendTextMessage(envelope.from, `Perfetto ${verifiedName.split(" ")[0]}! 🎉 Sono qui per aiutarti con tutto ciò che riguarda Wellhub. Come posso esserti utile?`);
     return true;
   }
 
   if (conv.user_name === "__pending__" && text.length > 1) {
     // Unknown user provided name
     await setConversationVerified(conv.id, text);
-    await sendTextMessage(envelope.from, `Grazie ${text.split(" ")[0]}! ✅ Come posso aiutarti?`);
+    await sendTextMessage(envelope.from, `Piacere ${text.split(" ")[0]}! 🎉 Sono Vibe, il tuo assistente Wellhub. Come posso aiutarti?`);
     return true;
   }
 
   // Unrecognised response — re-ask
   if (knownName) {
-    await sendTextMessage(envelope.from, `Non ho capito. Sei ${knownName.split(" ")[0]}? Rispondi "sì" per confermare.`);
+    await sendTextMessage(envelope.from, `Scusa, non ho capito bene 😊 Stai scrivendo a ${knownName.split(" ")[0]}? Rispondi "sì" per confermare.`);
   } else {
-    await sendTextMessage(envelope.from, `Puoi dirmi il tuo nome e cognome per procedere?`);
+    await sendTextMessage(envelope.from, `Puoi dirmi il tuo nome e cognome così posso aiutarti meglio?`);
   }
   return true;
 }

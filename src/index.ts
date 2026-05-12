@@ -16,7 +16,7 @@ app.use(
 
 app.use("/", webhookRouter);
 
-app.get("/health", (_req, res) => res.json({ status: "ok", version: "verified-v1" }));
+app.get("/health", (_req, res) => res.json({ status: "ok", version: "verified-v2" }));
 
 app.listen(PORT, () => {
   console.log(`vibe-gateway listening on port ${PORT}`);
