@@ -114,9 +114,10 @@ async function handleVerification(
 
   // Verification in progress
   if (conv.user_name !== "__pending__" && AFFIRMATIVE.has(text.toLowerCase())) {
-    // Known user confirmed
-    await setConversationVerified(conv.id, conv.user_name);
-    await sendTextMessage(envelope.from, `Perfetto ${conv.user_name.split(" ")[0]}! ✅ Come posso aiutarti?`);
+    // Known user confirmed — use knownName as fallback if user_name was lost
+    const verifiedName = conv.user_name ?? knownName ?? text;
+    await setConversationVerified(conv.id, verifiedName);
+    await sendTextMessage(envelope.from, `Perfetto ${verifiedName.split(" ")[0]}! ✅ Come posso aiutarti?`);
     return true;
   }
 

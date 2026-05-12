@@ -13,9 +13,19 @@ export async function getOrCreateConversation(phone: string): Promise<string> {
 }
 
 export async function getOrCreateConversationDetails(phone: string): Promise<ConversationDetails> {
+  const { data: existing } = await supabase
+    .from("conversations")
+    .select("id, verified, user_name")
+    .eq("phone", phone)
+    .single();
+
+  if (existing) {
+    return { id: existing.id, verified: !!existing.verified, user_name: existing.user_name ?? null };
+  }
+
   const { data, error } = await supabase
     .from("conversations")
-    .upsert({ phone }, { onConflict: "phone" })
+    .insert({ phone })
     .select("id, verified, user_name")
     .single();
 
