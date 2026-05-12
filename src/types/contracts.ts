@@ -1,11 +1,17 @@
+export interface HistoryMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export interface MessageEnvelope {
   messageId: string;
   from: string;
   timestamp: string;
   type: "text" | "audio";
   text?: string;
-  audioData?: string;     // base64 encoded audio
-  audioMimeType?: string; // e.g. "audio/ogg; codecs=opus"
+  audioData?: string;
+  audioMimeType?: string;
+  history?: HistoryMessage[];
 }
 
 export interface AgentResponse {

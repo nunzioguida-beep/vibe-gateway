@@ -6,6 +6,7 @@ import {
   getOrCreateConversation,
   saveUserMessage,
   saveAssistantMessage,
+  getRecentMessages,
 } from "../services/history";
 import { MessageEnvelope } from "../types/contracts";
 
@@ -51,7 +52,13 @@ router.post(
         // Mark as read so the user sees the double blue tick
         await markMessageRead(msg.id).catch(() => {});
 
-        console.log(`[webhook] forwarding to agent: ${envelope.from} "${envelope.text ?? "audio"}"`);
+        // Fetch history to give the bot memory (best-effort, don't block on failure)
+        try {
+          const conversationId = await getOrCreateConversation(envelope.from);
+          envelope.history = await getRecentMessages(conversationId);
+        } catch (_) {}
+
+        console.log(`[webhook] forwarding to agent: ${envelope.from} "${envelope.text ?? "audio"}" history:${envelope.history?.length ?? 0}`);
         const agentResponse = await forwardToAgent(envelope);
         console.log(`[webhook] agent replied: "${agentResponse.reply.slice(0, 80)}"`);
         await sendTextMessage(envelope.from, agentResponse.reply);

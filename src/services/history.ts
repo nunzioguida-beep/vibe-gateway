@@ -1,5 +1,5 @@
 import { supabase } from "../lib/supabase";
-import { MessageEnvelope } from "../types/contracts";
+import { MessageEnvelope, HistoryMessage } from "../types/contracts";
 
 export async function getOrCreateConversation(phone: string): Promise<string> {
   const { data, error } = await supabase
@@ -25,6 +25,21 @@ export async function saveUserMessage(
   });
 
   if (error) throw error;
+}
+
+export async function getRecentMessages(
+  conversationId: string,
+  limit = 10
+): Promise<HistoryMessage[]> {
+  const { data, error } = await supabase
+    .from("messages")
+    .select("role, content")
+    .eq("conversation_id", conversationId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error || !data) return [];
+  return (data as HistoryMessage[]).reverse();
 }
 
 export async function saveAssistantMessage(
