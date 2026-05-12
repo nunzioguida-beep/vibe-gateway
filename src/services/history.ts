@@ -58,7 +58,7 @@ export async function saveUserMessage(
 
 export async function getRecentMessages(
   conversationId: string,
-  limit = 10
+  limit = 5
 ): Promise<HistoryMessage[]> {
   const { data, error } = await supabase
     .from("messages")

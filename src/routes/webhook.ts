@@ -74,7 +74,14 @@ router.post(
         } catch (_) {}
 
         console.log(`[webhook] forwarding to agent: ${envelope.from} "${envelope.text ?? "audio"}" history:${envelope.history?.length ?? 0}`);
-        const agentResponse = await forwardToAgent(envelope);
+        let agentResponse;
+        try {
+          agentResponse = await forwardToAgent(envelope);
+        } catch (agentErr) {
+          console.error("[webhook] agent error, sending fallback:", agentErr);
+          await sendTextMessage(envelope.from, "Sorry, I'm having trouble responding right now. Please try again in a moment or visit support.wellhub.com 🙏");
+          continue;
+        }
         console.log(`[webhook] agent replied: "${agentResponse.reply.slice(0, 80)}"`);
         await sendTextMessage(envelope.from, agentResponse.reply);
         console.log(`[webhook] message sent to ${envelope.from}`);
