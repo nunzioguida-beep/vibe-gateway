@@ -21,7 +21,7 @@ export async function saveUserMessage(
     whatsapp_msg_id: envelope.messageId,
     role: "user",
     message_type: envelope.type,
-    content: envelope.text ?? envelope.audioUrl ?? "",
+    content: envelope.text ?? envelope.audioData ?? "",
   });
 
   if (error) throw error;
