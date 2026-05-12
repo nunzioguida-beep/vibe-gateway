@@ -109,63 +109,40 @@ async function handleVerification(
   conv: { id: string; verified: boolean; user_name: string | null },
   envelope: { from: string; text?: string; type: string }
 ): Promise<boolean> {
-  const knownUsers: Record<string, string> = JSON.parse(process.env.KNOWN_USERS ?? "{}");
-  const knownName = knownUsers[envelope.from];
   const text = envelope.text?.trim() ?? "";
   const lang = detectLang(text);
 
-  const msg = {
-    greetKnown: (name: string) => lang === "en"
-      ? `Hi ${name}! 👋 I'm Vibe, your Wellhub assistant. Just to confirm — is that you? Reply "yes" 😊`
-      : `Ciao ${name}! 👋 Sono Vibe, il tuo assistente Wellhub. Prima di iniziare, posso chiederti di confermare che sei tu? Rispondi "sì" 😊`,
-    greetUnknown: () => lang === "en"
-      ? `Hi! 👋 I'm Vibe, the Wellhub assistant. To protect your privacy, could you tell me your full name?`
-      : `Ciao! 👋 Sono Vibe, l'assistente Wellhub. Per proteggere la tua privacy, puoi dirmi il tuo nome e cognome?`,
-    confirmed: (name: string) => lang === "en"
-      ? `Great, ${name}! 🎉 I'm here to help with anything Wellhub-related. What can I do for you?`
-      : `Perfetto ${name}! 🎉 Sono qui per aiutarti con tutto ciò che riguarda Wellhub. Come posso esserti utile?`,
-    welcome: (name: string) => lang === "en"
-      ? `Nice to meet you, ${name}! 🎉 I'm Vibe, your Wellhub assistant. How can I help?`
-      : `Piacere ${name}! 🎉 Sono Vibe, il tuo assistente Wellhub. Come posso aiutarti?`,
-    reaskKnown: (name: string) => lang === "en"
-      ? `Sorry, I didn't catch that 😊 Are you ${name}? Reply "yes" to confirm.`
-      : `Scusa, non ho capito bene 😊 Stai scrivendo a ${name}? Rispondi "sì" per confermare.`,
-    reaskUnknown: () => lang === "en"
-      ? `Could you share your full name so I can assist you better?`
-      : `Puoi dirmi il tuo nome e cognome così posso aiutarti meglio?`,
-  };
-
   if (conv.user_name === null) {
-    if (knownName) {
-      await setConversationPendingVerification(conv.id, knownName);
-      await sendTextMessage(envelope.from, msg.greetKnown(knownName.split(" ")[0]));
-    } else {
-      await setConversationPendingVerification(conv.id, "__pending__");
-      await sendTextMessage(envelope.from, msg.greetUnknown());
-    }
-    return true;
-  }
-
-  // Verification in progress
-  if (conv.user_name !== "__pending__" && AFFIRMATIVE.has(text.toLowerCase())) {
-    const verifiedName = conv.user_name ?? knownName ?? text;
-    await setConversationVerified(conv.id, verifiedName);
-    await sendTextMessage(envelope.from, msg.confirmed(verifiedName.split(" ")[0]));
+    // First interaction — ask for name
+    await setConversationPendingVerification(conv.id, "__pending__");
+    await sendTextMessage(
+      envelope.from,
+      lang === "en"
+        ? `Hi! 👋 I'm Vibe, your Wellhub assistant. I'm here to help you with gyms, plans, bookings and more.\n\nCould you tell me your name?`
+        : `Ciao! 👋 Sono Vibe, il tuo assistente Wellhub. Sono qui per aiutarti con palestre, piani, prenotazioni e molto altro.\n\nCome ti chiami?`
+    );
     return true;
   }
 
   if (conv.user_name === "__pending__" && text.length > 1) {
+    // User provided their name
     await setConversationVerified(conv.id, text);
-    await sendTextMessage(envelope.from, msg.welcome(text.split(" ")[0]));
+    await sendTextMessage(
+      envelope.from,
+      lang === "en"
+        ? `Nice to meet you, ${text.split(" ")[0]}! 🎉 How can I help you today?`
+        : `Piacere ${text.split(" ")[0]}! 🎉 Come posso aiutarti oggi?`
+    );
     return true;
   }
 
-  // Unrecognised response — re-ask
-  if (knownName) {
-    await sendTextMessage(envelope.from, msg.reaskKnown(knownName.split(" ")[0]));
-  } else {
-    await sendTextMessage(envelope.from, msg.reaskUnknown());
-  }
+  // Waiting for name but got something too short — re-ask
+  await sendTextMessage(
+    envelope.from,
+    lang === "en"
+      ? `Could you share your name so I can assist you better? 😊`
+      : `Puoi dirmi il tuo nome così posso aiutarti meglio? 😊`
+  );
   return true;
 }
 
