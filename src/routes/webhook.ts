@@ -4,6 +4,9 @@ import { forwardToAgent } from "../services/vibeCore";
 import { sendTextMessage, markMessageRead, downloadMedia } from "../services/whatsapp";
 import {
   getOrCreateConversation,
+  getOrCreateConversationDetails,
+  setConversationPendingVerification,
+  setConversationVerified,
   saveUserMessage,
   saveAssistantMessage,
   getRecentMessages,
@@ -52,9 +55,16 @@ router.post(
         // Mark as read so the user sees the double blue tick
         await markMessageRead(msg.id).catch(() => {});
 
-        // Fetch history to give the bot memory (best-effort, don't block on failure)
+        // Identity verification
+        const conv = await getOrCreateConversationDetails(envelope.from).catch(() => null);
+        if (conv && !conv.verified) {
+          const handled = await handleVerification(conv, envelope);
+          if (handled) continue;
+        }
+
+        // Fetch history to give the bot memory (best-effort)
         try {
-          const conversationId = await getOrCreateConversation(envelope.from);
+          const conversationId = conv?.id ?? await getOrCreateConversation(envelope.from);
           envelope.history = await getRecentMessages(conversationId);
         } catch (_) {}
 
@@ -79,6 +89,52 @@ router.post(
     }
   }
 );
+
+const AFFIRMATIVE = new Set(["si", "sì", "yes", "sono io", "confermo", "ok", "esatto", "certo", "sure", "sim", "sí"]);
+
+async function handleVerification(
+  conv: { id: string; verified: boolean; user_name: string | null },
+  envelope: { from: string; text?: string; type: string }
+): Promise<boolean> {
+  const knownUsers: Record<string, string> = JSON.parse(process.env.KNOWN_USERS ?? "{}");
+  const knownName = knownUsers[envelope.from];
+  const text = envelope.text?.trim() ?? "";
+
+  if (conv.user_name === null) {
+    // First interaction — start verification
+    if (knownName) {
+      await setConversationPendingVerification(conv.id, knownName);
+      await sendTextMessage(envelope.from, `Ciao ${knownName.split(" ")[0]}! 👋 Sei tu a scrivere? Rispondi "sì" per confermare.`);
+    } else {
+      await setConversationPendingVerification(conv.id, "__pending__");
+      await sendTextMessage(envelope.from, `Ciao! 👋 Per tutelare la tua privacy, puoi dirmi il tuo nome e cognome?`);
+    }
+    return true;
+  }
+
+  // Verification in progress
+  if (conv.user_name !== "__pending__" && AFFIRMATIVE.has(text.toLowerCase())) {
+    // Known user confirmed
+    await setConversationVerified(conv.id, conv.user_name);
+    await sendTextMessage(envelope.from, `Perfetto ${conv.user_name.split(" ")[0]}! ✅ Come posso aiutarti?`);
+    return true;
+  }
+
+  if (conv.user_name === "__pending__" && text.length > 1) {
+    // Unknown user provided name
+    await setConversationVerified(conv.id, text);
+    await sendTextMessage(envelope.from, `Grazie ${text.split(" ")[0]}! ✅ Come posso aiutarti?`);
+    return true;
+  }
+
+  // Unrecognised response — re-ask
+  if (knownName) {
+    await sendTextMessage(envelope.from, `Non ho capito. Sei ${knownName.split(" ")[0]}? Rispondi "sì" per confermare.`);
+  } else {
+    await sendTextMessage(envelope.from, `Puoi dirmi il tuo nome e cognome per procedere?`);
+  }
+  return true;
+}
 
 async function buildEnvelope(
   msg: MetaMessage,

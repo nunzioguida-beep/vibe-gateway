@@ -1,15 +1,34 @@
 import { supabase } from "../lib/supabase";
 import { MessageEnvelope, HistoryMessage } from "../types/contracts";
 
+export interface ConversationDetails {
+  id: string;
+  verified: boolean;
+  user_name: string | null;
+}
+
 export async function getOrCreateConversation(phone: string): Promise<string> {
+  const details = await getOrCreateConversationDetails(phone);
+  return details.id;
+}
+
+export async function getOrCreateConversationDetails(phone: string): Promise<ConversationDetails> {
   const { data, error } = await supabase
     .from("conversations")
     .upsert({ phone }, { onConflict: "phone" })
-    .select("id")
+    .select("id, verified, user_name")
     .single();
 
   if (error) throw error;
-  return data.id as string;
+  return { id: data.id, verified: !!data.verified, user_name: data.user_name ?? null };
+}
+
+export async function setConversationPendingVerification(id: string, userName: string): Promise<void> {
+  await supabase.from("conversations").update({ user_name: userName }).eq("id", id);
+}
+
+export async function setConversationVerified(id: string, userName: string): Promise<void> {
+  await supabase.from("conversations").update({ verified: true, user_name: userName }).eq("id", id);
 }
 
 export async function saveUserMessage(
