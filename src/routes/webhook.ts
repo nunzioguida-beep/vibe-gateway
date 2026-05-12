@@ -112,15 +112,14 @@ async function handleVerification(
   const text = envelope.text?.trim() ?? "";
   const lang = detectLang(text);
 
-  if (conv.user_name === null) {
-    // First interaction — ask for name
+  const greet = lang === "en"
+    ? `Hi! 👋 I'm Vibe, your Wellhub assistant. I'm here to help you with gyms, plans, bookings and more.\n\nCould you tell me your name?`
+    : `Ciao! 👋 Sono Vibe, il tuo assistente Wellhub. Sono qui per aiutarti con palestre, piani, prenotazioni e molto altro.\n\nCome ti chiami?`;
+
+  if (conv.user_name === null || (conv.user_name !== "__pending__")) {
+    // Fresh start (or stale state from previous flow) — always ask for name
     await setConversationPendingVerification(conv.id, "__pending__");
-    await sendTextMessage(
-      envelope.from,
-      lang === "en"
-        ? `Hi! 👋 I'm Vibe, your Wellhub assistant. I'm here to help you with gyms, plans, bookings and more.\n\nCould you tell me your name?`
-        : `Ciao! 👋 Sono Vibe, il tuo assistente Wellhub. Sono qui per aiutarti con palestre, piani, prenotazioni e molto altro.\n\nCome ti chiami?`
-    );
+    await sendTextMessage(envelope.from, greet);
     return true;
   }
 
@@ -136,13 +135,8 @@ async function handleVerification(
     return true;
   }
 
-  // Waiting for name but got something too short — re-ask
-  await sendTextMessage(
-    envelope.from,
-    lang === "en"
-      ? `Could you share your name so I can assist you better? 😊`
-      : `Puoi dirmi il tuo nome così posso aiutarti meglio? 😊`
-  );
+  // Waiting for name but got something too short — re-ask with intro
+  await sendTextMessage(envelope.from, greet);
   return true;
 }
 
