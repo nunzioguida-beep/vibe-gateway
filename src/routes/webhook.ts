@@ -87,6 +87,10 @@ router.post(
         console.log(`[webhook] message sent to ${envelope.from}`);
 
         // Persist to Supabase in background — sequential so user msg always has earlier created_at than assistant msg
+        // For audio: store the transcription text (returned by vibe-core) instead of raw base64
+        if (envelope.type === "audio" && agentResponse.transcription) {
+          envelope.transcription = agentResponse.transcription;
+        }
         getOrCreateConversation(envelope.from)
           .then(async (conversationId) => {
             await saveUserMessage(conversationId, envelope);
