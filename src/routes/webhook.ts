@@ -86,14 +86,12 @@ router.post(
         await sendTextMessage(envelope.from, agentResponse.reply);
         console.log(`[webhook] message sent to ${envelope.from}`);
 
-        // Persist to Supabase in background — don't block the reply
+        // Persist to Supabase in background — sequential so user msg always has earlier created_at than assistant msg
         getOrCreateConversation(envelope.from)
-          .then((conversationId) =>
-            Promise.all([
-              saveUserMessage(conversationId, envelope),
-              saveAssistantMessage(conversationId, agentResponse.reply),
-            ])
-          )
+          .then(async (conversationId) => {
+            await saveUserMessage(conversationId, envelope);
+            await saveAssistantMessage(conversationId, agentResponse.reply);
+          })
           .catch((e) => console.error("Supabase persistence error:", e));
       }
     } catch (err) {
