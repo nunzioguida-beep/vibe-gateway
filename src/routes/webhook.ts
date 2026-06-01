@@ -11,6 +11,7 @@ import {
   saveAssistantMessage,
   getRecentMessages,
 } from "../services/history";
+import { getTesterData } from "../services/darwinData";
 import { MessageEnvelope, AgentResponse } from "../types/contracts";
 
 const router = Router();
@@ -67,6 +68,18 @@ router.post(
           envelope.userName = conv.user_name;
         }
 
+        // Attach Darwin user context if available
+        const testerData = getTesterData(envelope.from);
+        if (testerData) {
+          envelope.userContext = {
+            plan: testerData.plan,
+            favoriteGym: testerData.favoriteGym,
+            fmFreeSlots: testerData.fmFreeSlots,
+            checkInMay: testerData.checkInMay,
+            checkInJune: testerData.checkInJune,
+          };
+        }
+
         // Fetch history to give the bot memory (best-effort)
         try {
           const conversationId = conv?.id ?? await getOrCreateConversation(envelope.from);
@@ -106,12 +119,59 @@ router.post(
 
 const AFFIRMATIVE = new Set(["si", "sì", "yes", "sono io", "confermo", "ok", "esatto", "certo", "sure", "sim", "sí"]);
 
-function detectLang(text: string): "it" | "en" {
+type Lang = "it" | "en" | "pt" | "es";
+
+function detectLang(text: string): Lang {
   const lower = text.toLowerCase();
+  const words = lower.split(/\s+/);
+  // Portuguese — exclusive chars first
+  if (/[ãõ]/.test(lower)) return "pt";
+  const ptWords = ["olá", "ola", "obrigado", "obrigada", "valeu", "sim", "tudo", "tchau", "meu", "minha", "posso", "preciso", "pode", "fazer", "boa", "bom", "até"];
+  if (ptWords.some(w => words.includes(w))) return "pt";
+  // Spanish — exclusive chars first
+  if (/[¿¡]/.test(lower) || /[á]/.test(lower)) return "es";
+  const esWords = ["hola", "gracias", "puedo", "quiero", "ayuda", "entendido", "listo", "genial", "adiós", "adios", "buenas", "bueno"];
+  if (esWords.some(w => words.includes(w))) return "es";
+  // Italian
   if (/[àèìòùé]/.test(lower)) return "it";
-  const itWords = ["ciao", "sono", "voglio", "cosa", "come", "grazie", "prego", "salve", "buongiorno", "aiuto"];
-  if (itWords.some(w => lower.split(/\s+/).includes(w))) return "it";
+  const itWords = ["ciao", "sono", "voglio", "cosa", "come", "grazie", "prego", "salve", "buongiorno", "aiuto", "arrivederci"];
+  if (itWords.some(w => words.includes(w))) return "it";
   return "en";
+}
+
+const GREET: Record<Lang, string> = {
+  it: "Ciao! 👋 Sono Vibe, il tuo assistente Wellhub. Sono qui per aiutarti con palestre, piani, prenotazioni e molto altro.\n\nCome ti chiami?",
+  en: "Hi! 👋 I'm Vibe, your Wellhub assistant. I'm here to help you with gyms, plans, bookings and more.\n\nCould you tell me your name?",
+  pt: "Olá! 👋 Sou o Vibe, seu assistente Wellhub. Estou aqui para ajudar com academias, planos, reservas e muito mais.\n\nQual é o seu nome?",
+  es: "¡Hola! 👋 Soy Vibe, tu asistente de Wellhub. Estoy aquí para ayudarte con gimnasios, planes, reservas y más.\n\n¿Cuál es tu nombre?",
+};
+
+function buildWelcomeBack(firstName: string, lang: Lang, phone: string): string {
+  const d = getTesterData(phone);
+
+  if (d) {
+    const gymPart: Record<Lang, string> = {
+      it: d.favoriteGym ? ` e per apprezzare così tanto ${d.favoriteGym}!` : "!",
+      en: d.favoriteGym ? ` and for loving ${d.favoriteGym} so much!` : "!",
+      pt: d.favoriteGym ? ` e por amar tanto o ${d.favoriteGym}!` : "!",
+      es: d.favoriteGym ? ` y por amar tanto ${d.favoriteGym}!` : "!",
+    };
+    const msgs: Record<Lang, string> = {
+      it: `Bene ${firstName}! 🎉 Che piacere averti qui — grazie per essere il nostro utente ${d.plan}${gymPart.it} Come posso aiutarti oggi?`,
+      en: `Great ${firstName}! 🎉 So happy to have you here — thank you for being our ${d.plan} member${gymPart.en} How can I help you today?`,
+      pt: `Ótimo ${firstName}! 🎉 Que prazer ter você aqui — obrigado por ser nosso usuário ${d.plan}${gymPart.pt} Como posso te ajudar hoje?`,
+      es: `¡Genial ${firstName}! 🎉 Qué placer tenerte aquí — gracias por ser nuestro usuario ${d.plan}${gymPart.es} ¿En qué puedo ayudarte hoy?`,
+    };
+    return msgs[lang];
+  }
+
+  const generic: Record<Lang, string> = {
+    it: `Piacere ${firstName}! 🎉 Come posso aiutarti oggi?`,
+    en: `Nice to meet you, ${firstName}! 🎉 How can I help you today?`,
+    pt: `Prazer, ${firstName}! 🎉 Como posso te ajudar hoje?`,
+    es: `¡Encantado, ${firstName}! 🎉 ¿En qué puedo ayudarte hoy?`,
+  };
+  return generic[lang];
 }
 
 async function handleVerification(
@@ -120,31 +180,22 @@ async function handleVerification(
 ): Promise<boolean> {
   const text = envelope.text?.trim() ?? "";
   const lang = detectLang(text);
+  const greet = GREET[lang];
 
-  const greet = lang === "en"
-    ? `Hi! 👋 I'm Vibe, your Wellhub assistant. I'm here to help you with gyms, plans, bookings and more.\n\nCould you tell me your name?`
-    : `Ciao! 👋 Sono Vibe, il tuo assistente Wellhub. Sono qui per aiutarti con palestre, piani, prenotazioni e molto altro.\n\nCome ti chiami?`;
-
-  if (conv.user_name === null || (conv.user_name !== "__pending__")) {
-    // Fresh start (or stale state from previous flow) — always ask for name
+  if (conv.user_name === null || conv.user_name !== "__pending__") {
     await setConversationPendingVerification(conv.id, "__pending__");
     await sendTextMessage(envelope.from, greet);
     return true;
   }
 
   if (conv.user_name === "__pending__" && text.length > 1) {
-    // User provided their name
     await setConversationVerified(conv.id, text);
-    await sendTextMessage(
-      envelope.from,
-      lang === "en"
-        ? `Nice to meet you, ${text.split(" ")[0]}! 🎉 How can I help you today?`
-        : `Piacere ${text.split(" ")[0]}! 🎉 Come posso aiutarti oggi?`
-    );
+    const firstName = text.split(" ")[0];
+    await sendTextMessage(envelope.from, buildWelcomeBack(firstName, lang, envelope.from));
     return true;
   }
 
-  // Waiting for name but got something too short — re-ask with intro
+  // Too short — re-ask
   await sendTextMessage(envelope.from, greet);
   return true;
 }

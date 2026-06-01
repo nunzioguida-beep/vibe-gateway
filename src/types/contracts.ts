@@ -3,6 +3,14 @@ export interface HistoryMessage {
   content: string;
 }
 
+export interface UserContext {
+  plan?: string;
+  favoriteGym?: string | null;
+  fmFreeSlots?: number;
+  checkInMay?: number;
+  checkInJune?: number;
+}
+
 export interface MessageEnvelope {
   messageId: string;
   from: string;
@@ -14,6 +22,7 @@ export interface MessageEnvelope {
   history?: HistoryMessage[];
   userName?: string;
   transcription?: string;
+  userContext?: UserContext;
 }
 
 export interface AgentResponse {
