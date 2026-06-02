@@ -13,7 +13,7 @@ export interface TesterData {
 const TESTER_DATA: Record<string, TesterData> = {
   "393357295306": { name: "Nunzio",   email: "nunzio.guida@gympass.com",      plan: "Gold",      favoriteGym: "Energie Fitness",              activeFM: 1, fmFreeSlots: 2, checkInMay: 20, checkInJune: 1  },
   // "55XXXXXXXXXX":  { name: "Cesar",   email: "cesar@gympass.com",             plan: "Diamond",   favoriteGym: "F45",                          activeFM: 1, fmFreeSlots: 2, checkInMay: 6,  checkInJune: 0  },
-  // "55XXXXXXXXXX":  { name: "Thiago",  email: "thiago.pessoa@gympass.com",     plan: "Gold",      favoriteGym: null,                           activeFM: 1, fmFreeSlots: 2, checkInMay: 0,  checkInJune: 0  },
+  "34618633099":   { name: "Thiago",  email: "thiago.pessoa@gympass.com",     plan: "Gold",      favoriteGym: null,                           activeFM: 1, fmFreeSlots: 2, checkInMay: 0,  checkInJune: 0  },
   // "55XXXXXXXXXX":  { name: "Gustavo", email: "gustavo.ramos@gympass.com",     plan: "Gold",      favoriteGym: "Montville Pickleball & Golf Club", activeFM: 2, fmFreeSlots: 1, checkInMay: 15, checkInJune: 0  },
   // "55XXXXXXXXXX":  { name: "Bruno",   email: "bruno.annicq@gympass.com",      plan: "Gold",      favoriteGym: null,                           activeFM: 1, fmFreeSlots: 2, checkInMay: 0,  checkInJune: 0  },
   // "1XXXXXXXXXX":   { name: "Ellen",   email: "ellen.hochberg@gympass.com",    plan: "Gold",      favoriteGym: "Solidcore W 57",               activeFM: 0, fmFreeSlots: 3, checkInMay: 17, checkInJune: 0  },
