@@ -2,15 +2,24 @@ import axios from "axios";
 
 const BASE_URL = "https://graph.facebook.com/v19.0";
 
+function getToken(phoneNumberId?: string): string {
+  const pid2 = process.env.META_PHONE_NUMBER_ID_2;
+  if (pid2 && phoneNumberId === pid2) {
+    return process.env.META_API_TOKEN_2 ?? process.env.META_API_TOKEN ?? "";
+  }
+  return process.env.META_API_TOKEN ?? "";
+}
+
 export async function sendTextMessage(
   to: string,
-  text: string
+  text: string,
+  phoneNumberId?: string
 ): Promise<void> {
-  const phoneNumberId = process.env.META_PHONE_NUMBER_ID;
-  const token = process.env.META_API_TOKEN;
+  const resolvedPhoneNumberId = phoneNumberId ?? process.env.META_PHONE_NUMBER_ID;
+  const token = getToken(resolvedPhoneNumberId);
 
   await axios.post(
-    `${BASE_URL}/${phoneNumberId}/messages`,
+    `${BASE_URL}/${resolvedPhoneNumberId}/messages`,
     {
       messaging_product: "whatsapp",
       to,
@@ -42,12 +51,15 @@ export async function downloadMedia(mediaId: string): Promise<{ data: Buffer; mi
   };
 }
 
-export async function markMessageRead(messageId: string): Promise<void> {
-  const phoneNumberId = process.env.META_PHONE_NUMBER_ID;
-  const token = process.env.META_API_TOKEN;
+export async function markMessageRead(
+  messageId: string,
+  phoneNumberId?: string
+): Promise<void> {
+  const resolvedPhoneNumberId = phoneNumberId ?? process.env.META_PHONE_NUMBER_ID;
+  const token = getToken(resolvedPhoneNumberId);
 
   await axios.post(
-    `${BASE_URL}/${phoneNumberId}/messages`,
+    `${BASE_URL}/${resolvedPhoneNumberId}/messages`,
     {
       messaging_product: "whatsapp",
       status: "read",

@@ -57,17 +57,19 @@ router.post(
       const messages = value?.messages;
       if (!value || !messages?.length) return;
 
+      const senderPhoneNumberId = value.metadata?.phone_number_id ?? process.env.META_PHONE_NUMBER_ID;
+
       for (const msg of messages) {
         const envelope = await buildEnvelope(msg, value);
         if (!envelope) continue;
 
         // Mark as read so the user sees the double blue tick
-        await markMessageRead(msg.id).catch(() => {});
+        await markMessageRead(msg.id, senderPhoneNumberId).catch(() => {});
 
         // Identity verification
         const conv = await getOrCreateConversationDetails(envelope.from).catch(() => null);
         if (conv && !conv.verified) {
-          const handled = await handleVerification(conv, envelope);
+          const handled = await handleVerification(conv, envelope, senderPhoneNumberId);
           if (handled) continue;
         }
 
@@ -100,11 +102,11 @@ router.post(
           agentResponse = await forwardToAgent(envelope);
         } catch (agentErr) {
           console.error("[webhook] agent error, sending fallback:", agentErr);
-          await sendTextMessage(envelope.from, "Sorry, I'm having trouble responding right now. Please try again in a moment or visit support.wellhub.com 🙏");
+          await sendTextMessage(envelope.from, "Sorry, I'm having trouble responding right now. Please try again in a moment or visit support.wellhub.com 🙏", senderPhoneNumberId);
           continue;
         }
         console.log(`[webhook] agent replied: "${agentResponse.reply.slice(0, 80)}"`);
-        await sendTextMessage(envelope.from, agentResponse.reply);
+        await sendTextMessage(envelope.from, agentResponse.reply, senderPhoneNumberId);
         console.log(`[webhook] message sent to ${envelope.from}`);
 
         // Persist to Supabase in background — sequential so user msg always has earlier created_at than assistant msg
@@ -184,7 +186,8 @@ function buildWelcomeBack(firstName: string, lang: Lang, phone: string): string 
 
 async function handleVerification(
   conv: { id: string; verified: boolean; user_name: string | null },
-  envelope: { from: string; text?: string; type: string }
+  envelope: { from: string; text?: string; type: string },
+  phoneNumberId?: string
 ): Promise<boolean> {
   const text = envelope.text?.trim() ?? "";
   const lang = detectLang(text);
@@ -192,19 +195,19 @@ async function handleVerification(
 
   if (conv.user_name === null || conv.user_name !== "__pending__") {
     await setConversationPendingVerification(conv.id, "__pending__");
-    await sendTextMessage(envelope.from, greet);
+    await sendTextMessage(envelope.from, greet, phoneNumberId);
     return true;
   }
 
   if (conv.user_name === "__pending__" && text.length > 1) {
     await setConversationVerified(conv.id, text);
     const firstName = text.split(" ")[0];
-    await sendTextMessage(envelope.from, buildWelcomeBack(firstName, lang, envelope.from));
+    await sendTextMessage(envelope.from, buildWelcomeBack(firstName, lang, envelope.from), phoneNumberId);
     return true;
   }
 
   // Too short — re-ask
-  await sendTextMessage(envelope.from, greet);
+  await sendTextMessage(envelope.from, greet, phoneNumberId);
   return true;
 }
 
@@ -253,6 +256,7 @@ interface MetaChange {
 
 interface MetaValue {
   messages?: MetaMessage[];
+  metadata?: { phone_number_id?: string };
 }
 
 interface MetaMessage {
