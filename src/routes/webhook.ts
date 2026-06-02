@@ -230,7 +230,7 @@ async function handleVerification(
   const state = parsePending(conv.user_name);
 
   if (state.stage === "new") {
-    const lang = detectLang(text);
+    const lang = detectLang(text || "");
     await setConversationPendingVerification(conv.id, `__pending__:${lang}`);
     await sendTextMessage(envelope.from, GREET[lang], phoneNumberId);
     return true;
@@ -276,7 +276,8 @@ async function buildEnvelope(
   }
 
   if (msg.type === "audio" && msg.audio?.id) {
-    const { data, mimeType } = await downloadMedia(msg.audio.id);
+    const phoneNumberId = value.metadata?.phone_number_id;
+    const { data, mimeType } = await downloadMedia(msg.audio.id, phoneNumberId);
     return {
       messageId: msg.id,
       from: msg.from,

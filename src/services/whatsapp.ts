@@ -35,8 +35,8 @@ export async function sendTextMessage(
   );
 }
 
-export async function downloadMedia(mediaId: string): Promise<{ data: Buffer; mimeType: string }> {
-  const token = process.env.META_API_TOKEN;
+export async function downloadMedia(mediaId: string, phoneNumberId?: string): Promise<{ data: Buffer; mimeType: string }> {
+  const token = getToken(phoneNumberId);
   const { data: mediaInfo } = await axios.get<{ url: string; mime_type: string }>(
     `${BASE_URL}/${mediaId}`,
     { headers: { Authorization: `Bearer ${token}` } }
