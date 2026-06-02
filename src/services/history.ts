@@ -85,3 +85,17 @@ export async function saveAssistantMessage(
 
   if (error) throw error;
 }
+
+export async function resetConversation(phone: string): Promise<boolean> {
+  const { data } = await supabase
+    .from("conversations")
+    .select("id")
+    .eq("phone", phone)
+    .single();
+
+  if (!data) return false;
+
+  await supabase.from("messages").delete().eq("conversation_id", data.id);
+  await supabase.from("conversations").delete().eq("id", data.id);
+  return true;
+}

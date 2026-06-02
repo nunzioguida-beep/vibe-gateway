@@ -10,11 +10,19 @@ import {
   saveUserMessage,
   saveAssistantMessage,
   getRecentMessages,
+  resetConversation,
 } from "../services/history";
 import { getTesterData } from "../services/darwinData";
 import { MessageEnvelope, AgentResponse } from "../types/contracts";
 
 const router = Router();
+
+// Reset conversation for a phone number (for testing — clears Supabase history)
+router.post("/reset/:phone", async (req: Request, res: Response) => {
+  const phone = req.params.phone;
+  const deleted = await resetConversation(phone).catch(() => false);
+  res.json({ ok: deleted, phone });
+});
 
 // Meta webhook verification handshake
 router.get("/webhook", (req: Request, res: Response) => {
