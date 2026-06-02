@@ -12,7 +12,7 @@ import {
   getRecentMessages,
   resetConversation,
 } from "../services/history";
-import { getTesterData } from "../services/darwinData";
+import { getTesterData, isApprovedEmail } from "../services/darwinData";
 import { MessageEnvelope, AgentResponse } from "../types/contracts";
 
 const router = Router();
@@ -156,6 +156,20 @@ const GREET: Record<Lang, string> = {
   es: "¡Hola! 👋 Soy Vibe, tu asistente de Wellhub. Estoy aquí para ayudarte con gimnasios, planes, reservas y más.\n\n¿Cuál es tu nombre?",
 };
 
+const EMAIL_ASK: Record<Lang, (name: string) => string> = {
+  it: (n) => `Grazie ${n}! 😊 Per continuare, inserisci l'email con cui sei registrato su Wellhub.`,
+  en: (n) => `Thanks ${n}! 😊 To continue, please share the email you use to log in to Wellhub.`,
+  pt: (n) => `Obrigado ${n}! 😊 Para continuar, informe o e-mail com que está registrado no Wellhub.`,
+  es: (n) => `¡Gracias ${n}! 😊 Para continuar, indícame el correo con el que estás registrado en Wellhub.`,
+};
+
+const EMAIL_FAIL: Record<Lang, string> = {
+  it: "Hmm, non riesco a trovare quell'email. Potresti verificare l'email con cui ti sei registrato su Wellhub e riprovare?",
+  en: "Hmm, I couldn't find that email. Could you double-check the email you used to sign up for Wellhub and try again?",
+  pt: "Hmm, não encontrei esse e-mail. Poderia verificar o e-mail com que se registrou no Wellhub e tentar novamente?",
+  es: "Hmm, no encontré ese correo. ¿Podrías verificar el correo con el que te registraste en Wellhub e intentarlo de nuevo?",
+};
+
 function buildWelcomeBack(firstName: string, lang: Lang, phone: string): string {
   const d = getTesterData(phone);
 
@@ -184,31 +198,67 @@ function buildWelcomeBack(firstName: string, lang: Lang, phone: string): string 
   return generic[lang];
 }
 
+// State machine encoded in user_name:
+//   null                        → new user
+//   "__pending__:<lang>"        → asked for name
+//   "__pending_email__:<n>:<lang>" → have name, asked for email
+//   (verified=true)             → done
+
+function parsePending(userName: string | null): { stage: "new" | "name" | "email"; lang: Lang; name?: string } {
+  if (!userName) return { stage: "new", lang: "en" };
+  if (userName.startsWith("__pending_email__:")) {
+    const rest = userName.slice("__pending_email__:".length);
+    const lastColon = rest.lastIndexOf(":");
+    const name = rest.slice(0, lastColon);
+    const lang = (rest.slice(lastColon + 1) as Lang) || "en";
+    return { stage: "email", lang, name };
+  }
+  if (userName.startsWith("__pending__:")) {
+    return { stage: "name", lang: (userName.split(":")[1] as Lang) || "en" };
+  }
+  // backward compat: old "__pending__" without lang
+  if (userName === "__pending__") return { stage: "name", lang: "en" };
+  return { stage: "new", lang: "en" };
+}
+
 async function handleVerification(
   conv: { id: string; verified: boolean; user_name: string | null },
   envelope: { from: string; text?: string; type: string },
   phoneNumberId?: string
 ): Promise<boolean> {
   const text = envelope.text?.trim() ?? "";
-  const lang = detectLang(text);
-  const greet = GREET[lang];
+  const state = parsePending(conv.user_name);
 
-  if (conv.user_name === null || conv.user_name !== "__pending__") {
-    await setConversationPendingVerification(conv.id, "__pending__");
-    await sendTextMessage(envelope.from, greet, phoneNumberId);
+  if (state.stage === "new") {
+    const lang = detectLang(text);
+    await setConversationPendingVerification(conv.id, `__pending__:${lang}`);
+    await sendTextMessage(envelope.from, GREET[lang], phoneNumberId);
     return true;
   }
 
-  if (conv.user_name === "__pending__" && text.length > 1) {
-    await setConversationVerified(conv.id, text);
-    const firstName = text.split(" ")[0];
-    await sendTextMessage(envelope.from, buildWelcomeBack(firstName, lang, envelope.from), phoneNumberId);
+  if (state.stage === "name") {
+    if (text.length < 2) {
+      await sendTextMessage(envelope.from, GREET[state.lang], phoneNumberId);
+      return true;
+    }
+    const name = text.split(" ")[0];
+    await setConversationPendingVerification(conv.id, `__pending_email__:${name}:${state.lang}`);
+    await sendTextMessage(envelope.from, EMAIL_ASK[state.lang](name), phoneNumberId);
     return true;
   }
 
-  // Too short — re-ask
-  await sendTextMessage(envelope.from, greet, phoneNumberId);
-  return true;
+  if (state.stage === "email") {
+    const email = text.toLowerCase().trim();
+    if (isApprovedEmail(email)) {
+      await setConversationVerified(conv.id, state.name!);
+      await sendTextMessage(envelope.from, buildWelcomeBack(state.name!, state.lang, envelope.from), phoneNumberId);
+    } else {
+      await sendTextMessage(envelope.from, EMAIL_FAIL[state.lang], phoneNumberId);
+    }
+    return true;
+  }
+
+  return false;
 }
 
 async function buildEnvelope(
