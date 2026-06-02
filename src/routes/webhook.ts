@@ -150,10 +150,10 @@ function detectLang(text: string): Lang {
 }
 
 const GREET: Record<Lang, string> = {
-  it: "Ciao! 👋 Sono Vibe, il tuo assistente Wellhub. Sono qui per aiutarti con palestre, piani, prenotazioni e molto altro.\n\nCome ti chiami?",
-  en: "Hi! 👋 I'm Vibe, your Wellhub assistant. I'm here to help you with gyms, plans, bookings and more.\n\nCould you tell me your name?",
-  pt: "Olá! 👋 Sou o Vibe, seu assistente Wellhub. Estou aqui para ajudar com academias, planos, reservas e muito mais.\n\nQual é o seu nome?",
-  es: "¡Hola! 👋 Soy Vibe, tu asistente de Wellhub. Estoy aquí para ayudarte con gimnasios, planes, reservas y más.\n\n¿Cuál es tu nombre?",
+  it: "Ciao! 👋 Sono Vibe, il tuo assistente Wellhub. Sono qui per aiutarti con palestre, piani, prenotazioni e molto altro.\n\nCome si chiama? (nome e cognome)",
+  en: "Hi! 👋 I'm Vibe, your Wellhub assistant. I'm here to help you with gyms, plans, bookings and more.\n\nCould you share your full name? (first and last name)",
+  pt: "Olá! 👋 Sou o Vibe, seu assistente Wellhub. Estou aqui para ajudar com academias, planos, reservas e muito mais.\n\nPoderia me informar seu nome completo? (nome e sobrenome)",
+  es: "¡Hola! 👋 Soy Vibe, tu asistente de Wellhub. Estoy aquí para ayudarte con gimnasios, planes, reservas y más.\n\n¿Podrías decirme tu nombre completo? (nombre y apellido)",
 };
 
 const EMAIL_ASK: Record<Lang, (name: string) => string> = {
