@@ -39,10 +39,23 @@ const APPROVED_EMAILS = new Set<string>([
   "liviamartini@gmail.com",
 ]);
 
-// Keyed by email for lookup after email verification
+// Gympass and Wellhub are the same company (rebranding), so the two corporate
+// domains are interchangeable: a tester may type @wellhub.com or @gympass.com.
+// Canonicalize to @gympass.com before any comparison. Other domains (e.g. gmail)
+// are left untouched.
+function normalizeEmail(email: string): string {
+  return email.toLowerCase().trim().replace(/@wellhub\.com$/, "@gympass.com");
+}
+
+// Approved emails, canonicalized so wellhub.com / gympass.com both match.
+const APPROVED_EMAILS_NORMALIZED = new Set<string>(
+  [...APPROVED_EMAILS].map(normalizeEmail)
+);
+
+// Keyed by canonicalized email for lookup after email verification
 const TESTER_BY_EMAIL: Record<string, TesterData> = {};
 for (const d of Object.values(TESTER_DATA)) {
-  TESTER_BY_EMAIL[d.email.toLowerCase()] = d;
+  TESTER_BY_EMAIL[normalizeEmail(d.email)] = d;
 }
 
 export function getTesterData(phoneNumber: string): TesterData | null {
@@ -51,9 +64,9 @@ export function getTesterData(phoneNumber: string): TesterData | null {
 }
 
 export function getTesterByEmail(email: string): TesterData | null {
-  return TESTER_BY_EMAIL[email.toLowerCase()] ?? null;
+  return TESTER_BY_EMAIL[normalizeEmail(email)] ?? null;
 }
 
 export function isApprovedEmail(email: string): boolean {
-  return APPROVED_EMAILS.has(email.toLowerCase().trim());
+  return APPROVED_EMAILS_NORMALIZED.has(normalizeEmail(email));
 }
