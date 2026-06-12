@@ -87,6 +87,11 @@ router.post(
             fmFreeSlots: testerData.fmFreeSlots,
             checkInMay: testerData.checkInMay,
             checkInJune: testerData.checkInJune,
+            fmName: testerData.fmName,
+            fmPlan: testerData.fmPlan,
+            fmGym: testerData.fmGym,
+            accountNotes: testerData.accountNotes,
+            suggestedPartner: testerData.suggestedPartner,
           };
         }
 

@@ -7,12 +7,17 @@ export interface TesterData {
   fmFreeSlots: number;
   checkInMay: number;
   checkInJune: number;
+  fmName?: string;
+  fmPlan?: string;
+  fmGym?: string | null;
+  accountNotes?: string;
+  suggestedPartner?: string;
 }
 
 // Keyed by phone number WITHOUT leading +
 const TESTER_DATA: Record<string, TesterData> = {
   "393357295306": { name: "Nunzio",   email: "nunzio.guida@gympass.com",      plan: "Gold",      favoriteGym: "Energie Fitness",              activeFM: 1, fmFreeSlots: 2, checkInMay: 20, checkInJune: 1  },
-  // "55XXXXXXXXXX":  { name: "Cesar",   email: "cesar@gympass.com",             plan: "Diamond",   favoriteGym: "F45",                          activeFM: 1, fmFreeSlots: 2, checkInMay: 6,  checkInJune: 0  },
+  "19178901779":   { name: "Cesar",   email: "cesar@gympass.com",             plan: "Diamond",   favoriteGym: "F45",                          activeFM: 1, fmFreeSlots: 2, checkInMay: 6,  checkInJune: 0, fmName: "Ana Karla Nogueira Carvalho", fmPlan: "Platinum", fmGym: "Solidcore", accountNotes: "Account in good standing — no fraud cases and no late cancellation / no-show records.", suggestedPartner: "Orangetheory Fitness - Danbury East, CT (functional-style training similar to F45, located in their area)" },
   "34618633099":   { name: "Thiago",  email: "thiago.pessoa@gympass.com",     plan: "Gold",      favoriteGym: null,                           activeFM: 1, fmFreeSlots: 2, checkInMay: 0,  checkInJune: 0  },
   "19739979012":   { name: "Gustavo", email: "gustavo.ramos@gympass.com",     plan: "Gold",      favoriteGym: "Montville Pickleball & Golf Club", activeFM: 2, fmFreeSlots: 1, checkInMay: 15, checkInJune: 0  },
   // "55XXXXXXXXXX":  { name: "Bruno",   email: "bruno.annicq@gympass.com",      plan: "Gold",      favoriteGym: null,                           activeFM: 1, fmFreeSlots: 2, checkInMay: 0,  checkInJune: 0  },

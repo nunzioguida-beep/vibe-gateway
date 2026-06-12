@@ -9,6 +9,11 @@ export interface UserContext {
   fmFreeSlots?: number;
   checkInMay?: number;
   checkInJune?: number;
+  fmName?: string;
+  fmPlan?: string;
+  fmGym?: string | null;
+  accountNotes?: string;
+  suggestedPartner?: string;
 }
 
 export interface MessageEnvelope {
